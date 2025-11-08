@@ -1,0 +1,97 @@
+// ---------- Datasource & Generator ----------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum Role {
+  SYSTEM_ADMIN
+  CLINIC_ADMIN
+  DOCTOR
+  PATIENT
+  RECEPTIONIST
+}
+
+// ---------- Core Models ----------
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  isActive  Boolean  @default(false)
+  role      Role
+  // Relations
+  clinics   Clinic[]        @relation("ClinicAdmins")
+  doctorAt  ClinicDoctor[]  @relation("DoctorUser")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Clinic {
+  id         String   @id @default(uuid())
+  name       String
+  code       String   @unique
+  email      String
+  phone      String?
+  isActive   Boolean  @default(true)
+  adminId    String
+  // Relations
+  admin      User      @relation("ClinicAdmins", fields: [adminId], references: [id])
+  specialties ClinicSpeciality[]
+  doctors     ClinicDoctor[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Speciality {
+  id          String              @id @default(uuid())
+  name        String              @unique
+  clinicLinks ClinicSpeciality[]
+  doctorLinks ClinicDoctorSpeciality[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Junction table: Clinic ↔ Speciality
+model ClinicSpeciality {
+  id           String      @id @default(uuid())
+  clinicId     String
+  specialityId String
+
+  clinic     Clinic     @relation(fields: [clinicId], references: [id])
+  speciality Speciality @relation(fields: [specialityId], references: [id])
+
+  @@unique([clinicId, specialityId])
+}
+
+// Junction table: Clinic ↔ Doctor (User)
+model ClinicDoctor {
+  id        String   @id @default(uuid())
+  clinicId  String
+  doctorId  String
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+  doctor User   @relation("DoctorUser", fields: [doctorId], references: [id])
+
+  specialties ClinicDoctorSpeciality[]
+
+  @@unique([clinicId, doctorId])
+}
+
+// Junction table: ClinicDoctor ↔ Speciality
+model ClinicDoctorSpeciality {
+  id             String      @id @default(uuid())
+  clinicDoctorId String
+  specialityId   String
+
+  clinicDoctor ClinicDoctor @relation(fields: [clinicDoctorId], references: [id])
+  speciality   Speciality   @relation(fields: [specialityId], references: [id])
+
+  @@unique([clinicDoctorId, specialityId])
+}
