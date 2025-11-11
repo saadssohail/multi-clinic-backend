@@ -1,10 +1,11 @@
 // ---------- Datasource & Generator ----------
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -18,63 +19,81 @@ enum Role {
 }
 
 // ---------- Core Models ----------
-
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  isActive  Boolean  @default(false)
-  role      Role
+  id             String          @id @default(uuid())
+  name           String
+  email          String          @unique
+  phone          String?
+  isActive       Boolean         @default(false)
+  role           Role
+
   // Relations
-  clinics   Clinic[]        @relation("ClinicAdmins")
-  doctorAt  ClinicDoctor[]  @relation("DoctorUser")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  clinics        Clinic[]        @relation("ClinicAdmins")
+  doctorAt       ClinicDoctor[]  @relation("DoctorUser")
+  patients       Patient[]
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  notifications  Notification[]
+  staffSchedules StaffSchedule[]
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("users")
 }
 
 model Clinic {
-  id         String   @id @default(uuid())
-  name       String
-  code       String   @unique
-  email      String
-  phone      String?
-  isActive   Boolean  @default(true)
-  adminId    String
-  // Relations
-  admin      User      @relation("ClinicAdmins", fields: [adminId], references: [id])
-  specialties ClinicSpeciality[]
-  doctors     ClinicDoctor[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String             @id @default(uuid())
+  name           String
+  code           String             @unique
+  email          String
+  phone          String?
+  isActive       Boolean            @default(true)
+  adminId        String
+
+  admin          User               @relation("ClinicAdmins", fields: [adminId], references: [id])
+  specialties    ClinicSpeciality[]
+  doctors        ClinicDoctor[]
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  reports        Report[]
+  staffSchedules StaffSchedule[]
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("clinics")
 }
 
 model Speciality {
-  id          String              @id @default(uuid())
-  name        String              @unique
+  id          String                   @id @default(uuid())
+  name        String                   @unique
   clinicLinks ClinicSpeciality[]
   doctorLinks ClinicDoctorSpeciality[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  @@map("specialities")
 }
 
 // Junction table: Clinic ↔ Speciality
 model ClinicSpeciality {
-  id           String      @id @default(uuid())
+  id           String @id @default(uuid())
   clinicId     String
   specialityId String
 
-  clinic     Clinic     @relation(fields: [clinicId], references: [id])
-  speciality Speciality @relation(fields: [specialityId], references: [id])
+  clinic       Clinic     @relation(fields: [clinicId], references: [id])
+  speciality   Speciality @relation(fields: [specialityId], references: [id])
 
   @@unique([clinicId, specialityId])
+  @@map("clinic_specialities")
 }
 
-// Junction table: Clinic ↔ Doctor (User)
+// Junction table: Clinic ↔ Doctor
 model ClinicDoctor {
-  id        String   @id @default(uuid())
-  clinicId  String
-  doctorId  String
+  id       String @id @default(uuid())
+  clinicId String
+  doctorId String
 
   clinic Clinic @relation(fields: [clinicId], references: [id])
   doctor User   @relation("DoctorUser", fields: [doctorId], references: [id])
@@ -82,11 +101,12 @@ model ClinicDoctor {
   specialties ClinicDoctorSpeciality[]
 
   @@unique([clinicId, doctorId])
+  @@map("clinic_doctors")
 }
 
 // Junction table: ClinicDoctor ↔ Speciality
 model ClinicDoctorSpeciality {
-  id             String      @id @default(uuid())
+  id             String @id @default(uuid())
   clinicDoctorId String
   specialityId   String
 
@@ -94,4 +114,140 @@ model ClinicDoctorSpeciality {
   speciality   Speciality   @relation(fields: [specialityId], references: [id])
 
   @@unique([clinicDoctorId, specialityId])
+  @@map("clinic_doctor_specialities")
+}
+
+model Patient {
+  id             String          @id @default(uuid())
+  userId         String?
+  fullName       String
+  gender         String?
+  dob            DateTime?
+  address        String?
+  email          String?
+  phone          String?
+
+  user           User?           @relation(fields: [userId], references: [id])
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  bills          Bill[]
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("patients")
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  clinicId  String
+  doctorId  String
+  patientId String
+  startTime DateTime
+  endTime   DateTime
+  status    String   @default("SCHEDULED")
+  priority  String?
+  notes     String?
+
+  clinic        Clinic         @relation(fields: [clinicId], references: [id])
+  doctor        User           @relation(fields: [doctorId], references: [id])
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  payments      Payment[]
+  notifications Notification[]
+  bills         Bill[]
+
+  @@index([clinicId, doctorId, startTime])
+  @@map("appointments")
+}
+
+model Bill {
+  id            String   @id @default(uuid())
+  appointmentId String
+  totalAmount   Float
+  discount      Float?   @default(0)
+  status        String   @default("UNPAID")
+  patientId     String?
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  payments    Payment[]
+  patient     Patient?    @relation(fields: [patientId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@map("bills")
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  billId        String
+  appointmentId String?
+  amount        Float
+  method        String
+  paidAt        DateTime @default(now())
+
+  bill        Bill         @relation(fields: [billId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@map("payments")
+}
+
+model MedicalRecord {
+  id          String   @id @default(uuid())
+  patientId   String
+  doctorId    String
+  clinicId    String
+  fileUrl     String
+  recordType  String?
+  description String?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  User    @relation(fields: [doctorId], references: [id])
+  clinic  Clinic  @relation(fields: [clinicId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@map("medical_records")
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  userId        String
+  appointmentId String?
+  message       String
+  type          String
+  isRead        Boolean  @default(false)
+  sentAt        DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@map("notifications")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  clinicId    String
+  type        String
+  data        Json
+  generatedAt DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+
+  @@map("reports")
+}
+
+model StaffSchedule {
+  id        String   @id @default(uuid())
+  clinicId  String
+  userId    String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([clinicId, userId, dayOfWeek])
+  @@map("staff_schedules")
 }
