@@ -1,6 +1,6 @@
 // ---------- Datasource & Generator ----------
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native"]
 }
 
@@ -20,12 +20,13 @@ enum Role {
 
 // ---------- Core Models ----------
 model User {
-  id             String          @id @default(uuid())
-  name           String
-  email          String          @unique
-  phone          String?
-  isActive       Boolean         @default(false)
-  role           Role
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  phone    String?
+  isActive Boolean @default(false)
+  role     Role
+  password String?
 
   // Relations
   clinics        Clinic[]        @relation("ClinicAdmins")
@@ -36,20 +37,20 @@ model User {
   notifications  Notification[]
   staffSchedules StaffSchedule[]
 
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
 model Clinic {
-  id             String             @id @default(uuid())
-  name           String
-  code           String             @unique
-  email          String
-  phone          String?
-  isActive       Boolean            @default(true)
-  adminId        String
+  id       String  @id @default(uuid())
+  name     String
+  code     String  @unique
+  email    String
+  phone    String?
+  isActive Boolean @default(true)
+  adminId  String
 
   admin          User               @relation("ClinicAdmins", fields: [adminId], references: [id])
   specialties    ClinicSpeciality[]
@@ -59,8 +60,8 @@ model Clinic {
   reports        Report[]
   staffSchedules StaffSchedule[]
 
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("clinics")
 }
@@ -82,8 +83,8 @@ model ClinicSpeciality {
   clinicId     String
   specialityId String
 
-  clinic       Clinic     @relation(fields: [clinicId], references: [id])
-  speciality   Speciality @relation(fields: [specialityId], references: [id])
+  clinic     Clinic     @relation(fields: [clinicId], references: [id])
+  speciality Speciality @relation(fields: [specialityId], references: [id])
 
   @@unique([clinicId, specialityId])
   @@map("clinic_specialities")
@@ -118,22 +119,23 @@ model ClinicDoctorSpeciality {
 }
 
 model Patient {
-  id             String          @id @default(uuid())
-  userId         String?
-  fullName       String
-  gender         String?
-  dob            DateTime?
-  address        String?
-  email          String?
-  phone          String?
+  id       String    @id @default(uuid())
+  userId   String?
+  fullName String
+  gender   String?
+  dob      DateTime?
+  address  String?
+  email    String?
+  phone    String?
+  password String?
 
   user           User?           @relation(fields: [userId], references: [id])
   appointments   Appointment[]
   medicalRecords MedicalRecord[]
   bills          Bill[]
 
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("patients")
 }
@@ -161,18 +163,18 @@ model Appointment {
 }
 
 model Bill {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   appointmentId String
   totalAmount   Float
-  discount      Float?   @default(0)
-  status        String   @default("UNPAID")
+  discount      Float?  @default(0)
+  status        String  @default("UNPAID")
   patientId     String?
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
   payments    Payment[]
   patient     Patient?    @relation(fields: [patientId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@map("bills")
 }
@@ -192,7 +194,7 @@ model Payment {
 }
 
 model MedicalRecord {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   patientId   String
   doctorId    String
   clinicId    String
@@ -204,7 +206,7 @@ model MedicalRecord {
   doctor  User    @relation(fields: [doctorId], references: [id])
   clinic  Clinic  @relation(fields: [clinicId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@map("medical_records")
 }

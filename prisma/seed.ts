@@ -1,9 +1,9 @@
 import { Clinic, Patient, PrismaClient, Role } from "@prisma/client";
-import { faker } from "@faker-js/faker";
 
 const prisma = new PrismaClient();
 
 async function main() {
+    const { faker } = await import("@faker-js/faker");  // ✅ dynamic import
   console.log("🌱 Starting seeding...");
 
   // ---------- Specialities ----------
@@ -20,7 +20,7 @@ async function main() {
     "General Medicine",
   ];
 
-  const specialities = await prisma.speciality.createMany({
+  await prisma.speciality.createMany({
     data: specialityNames.map((name) => ({ name })),
   });
 
@@ -39,6 +39,7 @@ async function main() {
         phone: faker.phone.number(),
         isActive: true,
         role: Role.CLINIC_ADMIN,
+        password: faker.internet.password(),       // <--- ADDED
       },
     });
 
@@ -52,7 +53,6 @@ async function main() {
       },
     });
 
-    // Assign random specialities to the clinic
     const assignedSpecs = faker.helpers.arrayElements(
       specialityList,
       faker.number.int({ min: 3, max: 6 })
@@ -67,9 +67,8 @@ async function main() {
   }
   console.log(`🏥 Created ${clinics.length} clinics`);
 
-  // ---------- Doctors, Receptionists, and Staff ----------
+  // ---------- Doctors & Receptionists ----------
   for (const clinic of clinics) {
-    // 5–10 doctors per clinic
     for (let i = 0; i < faker.number.int({ min: 15, max: 20 }); i++) {
       const doctor = await prisma.user.create({
         data: {
@@ -78,6 +77,7 @@ async function main() {
           phone: faker.phone.number(),
           isActive: true,
           role: Role.DOCTOR,
+          password: faker.internet.password(),     // <--- ADDED
         },
       });
 
@@ -85,7 +85,6 @@ async function main() {
         data: { clinicId: clinic.id, doctorId: doctor.id },
       });
 
-      // Assign 1–3 specialities
       const specs = faker.helpers.arrayElements(
         specialityList,
         faker.number.int({ min: 1, max: 3 })
@@ -100,7 +99,6 @@ async function main() {
       }
     }
 
-    // 2 receptionists per clinic
     for (let j = 0; j < 4; j++) {
       await prisma.user.create({
         data: {
@@ -109,16 +107,18 @@ async function main() {
           phone: faker.phone.number(),
           isActive: true,
           role: Role.RECEPTIONIST,
+          password: faker.internet.password(),     // <--- ADDED
         },
       });
     }
   }
 
-  console.log(`👩‍⚕️ Populated doctors and receptionists for all clinics`);
+  console.log(`👩‍⚕️ Populated doctors and receptionists`);
 
   // ---------- Patients ----------
   const patientsCount = 2000;
   const patients: Patient[] = [];
+
   for (let i = 0; i < patientsCount; i++) {
     const patient = await prisma.patient.create({
       data: {
@@ -128,13 +128,14 @@ async function main() {
         address: faker.location.streetAddress(),
         email: faker.internet.email(),
         phone: faker.phone.number(),
+        password: faker.internet.password(),       // <--- ADDED
       },
     });
     patients.push(patient);
   }
   console.log(`🧍 Created ${patients.length} patients`);
 
-  // ---------- Appointments, Bills & Payments ----------
+  // ---------- Appointments, Bills, Payments ----------
   const allClinics = await prisma.clinic.findMany({ include: { doctors: true } });
   const allDoctors = await prisma.user.findMany({ where: { role: Role.DOCTOR } });
 
@@ -159,7 +160,6 @@ async function main() {
       },
     });
 
-    // Bill
     const totalAmount = faker.number.float({ min: 2000, max: 10000 });
     const bill = await prisma.bill.create({
       data: {
@@ -171,7 +171,6 @@ async function main() {
       },
     });
 
-    // Payment if paid
     if (bill.status === "PAID") {
       await prisma.payment.create({
         data: {
@@ -183,9 +182,8 @@ async function main() {
     }
   }
 
-  console.log("💰 Appointments, bills, and payments generated");
+  console.log("💰 Appointments, bills, payments generated");
 
-  // ---------- Reports ----------
   for (const clinic of clinics) {
     await prisma.report.create({
       data: {
