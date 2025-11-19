@@ -48,7 +48,7 @@ model Clinic {
   name     String
   code     String  @unique
   email    String
-  phone    String?
+  phone    String
   isActive Boolean @default(true)
   adminId  String
 
@@ -127,7 +127,7 @@ model Patient {
   address  String?
   email    String?
   phone    String?
-  password String?
+  password String
 
   user           User?           @relation(fields: [userId], references: [id])
   appointments   Appointment[]

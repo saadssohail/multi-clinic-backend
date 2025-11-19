@@ -8,6 +8,12 @@ import { User } from '@prisma/client';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // 🔥 REQUIRED FOR SIGNUP + LOGIN
+  async findByEmail(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  // 🔥 USED BY AUTH SERVICE
   async create(dto: CreateUserDto): Promise<User> {
     return this.prisma.user.create({ data: dto });
   }
