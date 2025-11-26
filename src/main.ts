@@ -10,7 +10,7 @@ async function bootstrap(): Promise<void> {
 
   // ✅ Enable CORS for frontend
   app.enableCors({
-    origin: "http://localhost:5173", // your React/Vite frontend
+    origin: "http://localhost:3001", // your React/Vite frontend
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: false,
   });

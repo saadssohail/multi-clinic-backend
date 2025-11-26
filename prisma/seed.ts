@@ -1,9 +1,12 @@
-import { Clinic, Patient, PrismaClient, Role } from "@prisma/client";
+import { Clinic, PrismaClient, Role, User } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-    const { faker } = await import("@faker-js/faker");  // ✅ dynamic import
+  const plainPassword: string = "12345"; // fixed password
+  const hashedPassword: string = await bcrypt.hash(plainPassword, 10);
+  const { faker } = await import("@faker-js/faker");  // ✅ dynamic import
   console.log("🌱 Starting seeding...");
 
   // ---------- Specialities ----------
@@ -39,7 +42,7 @@ async function main() {
         phone: faker.phone.number(),
         isActive: true,
         role: Role.CLINIC_ADMIN,
-        password: faker.internet.password(),       // <--- ADDED
+        password: hashedPassword,       // <--- ADDED
       },
     });
 
@@ -77,7 +80,7 @@ async function main() {
           phone: faker.phone.number(),
           isActive: true,
           role: Role.DOCTOR,
-          password: faker.internet.password(),     // <--- ADDED
+          password: hashedPassword,     // <--- ADDED
         },
       });
 
@@ -107,7 +110,7 @@ async function main() {
           phone: faker.phone.number(),
           isActive: true,
           role: Role.RECEPTIONIST,
-          password: faker.internet.password(),     // <--- ADDED
+          password: hashedPassword,     // <--- ADDED
         },
       });
     }
@@ -116,19 +119,18 @@ async function main() {
   console.log(`👩‍⚕️ Populated doctors and receptionists`);
 
   // ---------- Patients ----------
-  const patientsCount = 2000;
-  const patients: Patient[] = [];
+  const patientsCount = 100;
+  const patients: User[] = [];
 
   for (let i = 0; i < patientsCount; i++) {
-    const patient = await prisma.patient.create({
+    const patient = await prisma.user.create({
       data: {
-        fullName: faker.person.fullName(),
-        gender: faker.person.sexType(),
-        dob: faker.date.birthdate({ min: 1950, max: 2020, mode: "year" }),
-        address: faker.location.streetAddress(),
+        name: faker.person.fullName(),
         email: faker.internet.email(),
         phone: faker.phone.number(),
-        password: faker.internet.password(),       // <--- ADDED
+        isActive: true,
+        role: Role.PATIENT,
+        password: hashedPassword,       // <--- ADDED
       },
     });
     patients.push(patient);
@@ -137,9 +139,8 @@ async function main() {
 
   // ---------- Appointments, Bills, Payments ----------
   const allClinics = await prisma.clinic.findMany({ include: { doctors: true } });
-  const allDoctors = await prisma.user.findMany({ where: { role: Role.DOCTOR } });
 
-  for (let i = 0; i < 5000; i++) {
+  for (let i = 0; i < 200; i++) {
     const clinic = faker.helpers.arrayElement(allClinics);
     const doctorLink = faker.helpers.arrayElement(clinic.doctors);
     if (!doctorLink) continue;

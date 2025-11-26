@@ -16,7 +16,7 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  phone?: string;
+  phone?: string | null;
 
   @IsEnum(Role)
   role!: Role;
@@ -26,5 +26,5 @@ export class CreateUserDto {
   isActive?: boolean;
 
   @IsString()
-  password!: string; 
+  password!: string;
 }

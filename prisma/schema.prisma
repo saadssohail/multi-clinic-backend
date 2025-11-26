@@ -29,16 +29,18 @@ model User {
   password String?
 
   // Relations
-  clinics        Clinic[]        @relation("ClinicAdmins")
-  doctorAt       ClinicDoctor[]  @relation("DoctorUser")
-  patients       Patient[]
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
-  notifications  Notification[]
-  staffSchedules StaffSchedule[]
+  clinics               Clinic[]        @relation("ClinicAdmins")
+  doctorAt              ClinicDoctor[]  @relation("DoctorUser")
+  doctorAppointments    Appointment[]   @relation(name: "DoctorAppointments")
+  patientAppointments   Appointment[]   @relation(name: "PatientAppointments")
+  patientMedicalRecords MedicalRecord[] @relation(name: "PatientMedicalRecords")
+  doctorMedicalRecords  MedicalRecord[] @relation(name: "DoctorMedicalRecords")
+  notifications         Notification[]
+  staffSchedules        StaffSchedule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  bills     Bill[]
 
   @@map("users")
 }
@@ -47,7 +49,7 @@ model Clinic {
   id       String  @id @default(uuid())
   name     String
   code     String  @unique
-  email    String
+  email    String  @unique
   phone    String
   isActive Boolean @default(true)
   adminId  String
@@ -118,28 +120,6 @@ model ClinicDoctorSpeciality {
   @@map("clinic_doctor_specialities")
 }
 
-model Patient {
-  id       String    @id @default(uuid())
-  userId   String?
-  fullName String
-  gender   String?
-  dob      DateTime?
-  address  String?
-  email    String?
-  phone    String?
-  password String
-
-  user           User?           @relation(fields: [userId], references: [id])
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
-  bills          Bill[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("patients")
-}
-
 model Appointment {
   id        String   @id @default(uuid())
   clinicId  String
@@ -152,8 +132,8 @@ model Appointment {
   notes     String?
 
   clinic        Clinic         @relation(fields: [clinicId], references: [id])
-  doctor        User           @relation(fields: [doctorId], references: [id])
-  patient       Patient        @relation(fields: [patientId], references: [id])
+  doctor        User           @relation(name: "DoctorAppointments", fields: [doctorId], references: [id])
+  patient       User           @relation(name: "PatientAppointments", fields: [patientId], references: [id])
   payments      Payment[]
   notifications Notification[]
   bills         Bill[]
@@ -172,7 +152,7 @@ model Bill {
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
   payments    Payment[]
-  patient     Patient?    @relation(fields: [patientId], references: [id])
+  patient     User?       @relation(fields: [patientId], references: [id])
 
   createdAt DateTime @default(now())
 
@@ -202,9 +182,9 @@ model MedicalRecord {
   recordType  String?
   description String?
 
-  patient Patient @relation(fields: [patientId], references: [id])
-  doctor  User    @relation(fields: [doctorId], references: [id])
-  clinic  Clinic  @relation(fields: [clinicId], references: [id])
+  patient User   @relation(name: "PatientMedicalRecords", fields: [patientId], references: [id])
+  doctor  User   @relation(name: "DoctorMedicalRecords", fields: [doctorId], references: [id])
+  clinic  Clinic @relation(fields: [clinicId], references: [id])
 
   createdAt DateTime @default(now())
 

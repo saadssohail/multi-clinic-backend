@@ -6,7 +6,7 @@ export class ClinicController {
   constructor(private readonly clinicService: ClinicService) {}
 
   @Get()
-  findAll(): string {
+  findAll() {
     return this.clinicService.findAll();
   }
 }
